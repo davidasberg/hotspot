@@ -56,15 +56,14 @@ void writeoutput(float *vect, int grid_rows, int grid_cols, char *file){
 	char str[STR_SIZE];
 
 	if( (fp = fopen(file, "w" )) == 0 )
-        printf( "The file was not opened\n" );
-
+        printf( "The file was not opened\n");
 
 	for (i=0; i < grid_rows; i++) 
-        for (j=0; j < grid_cols; j++){
-            sprintf(str, "%d\t%g\n", index, vect[i*grid_cols+j]);
-            fputs(str,fp);
-            index++;
-    	 }
+		for (j=0; j < grid_cols; j++){
+			sprintf(str, "%d\t%g\n", index, vect[i*grid_cols+j]);
+			fputs(str,fp);
+			index++;
+		}
     fclose(fp);	
 }
 
@@ -82,8 +81,9 @@ void readinput(float *vect, int grid_rows, int grid_cols, char *file){
 	for (i=0; i <= grid_rows-1; i++) 
         for (j=0; j <= grid_cols-1; j++){
             fgets(str, STR_SIZE, fp);
-            if (feof(fp))
+            if (feof(fp)){
                 fatal("not enough lines in file");
+            }
             //if ((sscanf(str, "%d%f", &index, &val) != 2) || (index != ((i-1)*(grid_cols-2)+j-1)))
             if ((sscanf(str, "%f", &val) != 1))
                 fatal("invalid file format");
@@ -236,7 +236,9 @@ int compute_tran_temp(float *MatrixPower,float *MatrixTemp[2], int col, int row,
 	time_elapsed=0.001;
 
     int src = 1, dst = 0;
-	
+
+	double startKernelTime = cpuSecond();
+
 	for (t = 0; t < total_iterations; t+=num_iterations) {
         int temp = src;
         src = dst;
@@ -244,6 +246,12 @@ int compute_tran_temp(float *MatrixPower,float *MatrixTemp[2], int col, int row,
         calculate_temp<<<dimGrid, dimBlock>>>(MIN(num_iterations, total_iterations-t), MatrixPower,MatrixTemp[src],MatrixTemp[dst],\
 		col,row,borderCols, borderRows, Cap,Rx,Ry,Rz,step,time_elapsed);
 	}
+
+	cudaDeviceSynchronize();
+
+	double elapsedTime = cpuSecond() - startKernelTime;
+	printf("GPU Runtime: %f\n", elapsedTime);
+
     return dst;
 }
 
@@ -259,10 +267,13 @@ void usage(int argc, char **argv){
 }
 
 int main(int argc, char** argv){   
-    std::cout << "version 2" << std::endl;
+    std::cout << "version 6\n" << std::endl;
     printf("WG size of kernel = %d X %d\n", BLOCK_SIZE, BLOCK_SIZE);
-
+	double start = cpuSecond();
     run(argc,argv);
+	double end = cpuSecond();
+
+	std::cout << "\nTime: " << end - start << "s" << std::endl;
 
     return EXIT_SUCCESS;
 }

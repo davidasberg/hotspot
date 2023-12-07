@@ -1,0 +1,1 @@
+./hotspotex && ./hotspotver

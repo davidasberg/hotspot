@@ -5,3 +5,6 @@
 *.cubin
 *.fatbin
 *.exe
+*.out
+.DS_Store
+hotspot
