@@ -109,9 +109,9 @@ __global__ void calculate_temp(int iteration,  //number of iteration
 							   int border_cols,  // border offset 
 							   int border_rows,  // border offset
                                float Cap,      //Capacitance
-                               float Rx, 
-                               float Ry, 
-                               float Rz, 
+                               float Rx_1, 
+                               float Ry_1, 
+                               float Rz_1, 
                                float step, 
                                float time_elapsed){
 	
@@ -121,7 +121,6 @@ __global__ void calculate_temp(int iteration,  //number of iteration
 
 	float amb_temp = 80.0;
     float step_div_Cap;
-    float Rx_1,Ry_1,Rz_1;
         
 	int bx = blockIdx.x;
     int by = blockIdx.y;
@@ -130,10 +129,6 @@ __global__ void calculate_temp(int iteration,  //number of iteration
 	int ty = threadIdx.y;
 	
 	step_div_Cap = step/Cap;
-	
-	Rx_1 = 1/Rx;
-	Ry_1 = 1/Ry;
-	Rz_1 = 1/Rz;
 	
     // each block finally computes result for a small block
     // after N iterations. 
@@ -238,6 +233,10 @@ std::pair<int, double> compute_tran_temp(float *MatrixPower,float *MatrixTemp[2]
     float time_elapsed;
 	time_elapsed=0.001;
 
+    float Rx_1 = 1/Rx;
+    float Ry_1 = 1/Ry;
+    float Rz_1 = 1/Rz;
+
     int src = 1, dst = 0;
 
 	double startKernelTime = cpuSecond();
@@ -247,7 +246,7 @@ std::pair<int, double> compute_tran_temp(float *MatrixPower,float *MatrixTemp[2]
         src = dst;
         dst = temp;
         calculate_temp<<<dimGrid, dimBlock>>>(MIN(num_iterations, total_iterations-t), MatrixPower,MatrixTemp[src],MatrixTemp[dst],\
-		col,row,borderCols, borderRows, Cap,Rx,Ry,Rz,step,time_elapsed);
+		col,row,borderCols, borderRows, Cap, Rx_1, Ry_1, Rz_1, step, time_elapsed);
 	}
 
 	cudaDeviceSynchronize();
@@ -268,7 +267,7 @@ void usage(int argc, char **argv){
 }
 
 int main(int argc, char** argv){   
-    std::cout << "version 55\n" << std::endl;
+    std::cout << "version 555_2\n" << std::endl;
     printf("WG size of kernel = %d X %d\n", BLOCK_SIZE, BLOCK_SIZE);
 	double start = cpuSecond();
     run(argc,argv);
@@ -334,8 +333,8 @@ void run(int argc, char** argv){
     printf("Start computing the transient temperature\n");
 
     int ret;
-
-    // we run the cuda compute 100 times and get the median and average runtime
+    
+    // we run the cuda compute 1000 times and get the median and average runtime
     std::vector<double> times;
     for(int i = 0; i < 100; i++){
         auto [ret, time] = compute_tran_temp(MatrixPower,MatrixTemp,grid_cols,grid_rows, \
@@ -344,7 +343,7 @@ void run(int argc, char** argv){
         times.push_back(time);
     }
 
-    std::cout << "Ran the sim " << times.size() << " times." << std::endl;
+    std::cout << std::endl << "Ran the sim " << times.size() << " times." << std::endl;
     std::sort(times.begin(), times.end());
     std::cout << "Median time: " << times[times.size()/2] << "s" << std::endl;
     std::cout << "Average time: " << std::accumulate(times.begin(), times.end(), 0.0)/times.size() << "s" << std::endl;
