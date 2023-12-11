@@ -4,6 +4,9 @@
 #include <assert.h>
 #include <iostream>
 #include <sys/time.h>
+#include <vector>
+#include <algorithm>
+#include <numeric>
 
 #ifdef RD_WG_SIZE_0_0                                                            
     #define BLOCK_SIZE RD_WG_SIZE_0_0                                        
@@ -123,14 +126,14 @@ __global__ void calculate_temp(int iteration,  //number of iteration
 	int bx = blockIdx.x;
     int by = blockIdx.y;
 
-	int tx=threadIdx.x;
-	int ty=threadIdx.y;
+	int tx = threadIdx.x;
+	int ty = threadIdx.y;
 	
-	step_div_Cap=step/Cap;
+	step_div_Cap = step/Cap;
 	
-	Rx_1=1/Rx;
-	Ry_1=1/Ry;
-	Rz_1=1/Rz;
+	Rx_1 = 1/Rx;
+	Ry_1 = 1/Ry;
+	Rz_1 = 1/Rz;
 	
     // each block finally computes result for a small block
     // after N iterations. 
@@ -215,7 +218,7 @@ __global__ void calculate_temp(int iteration,  //number of iteration
    compute N time steps
 */
 
-int compute_tran_temp(float *MatrixPower,float *MatrixTemp[2], int col, int row, \
+std::pair<int, double> compute_tran_temp(float *MatrixPower,float *MatrixTemp[2], int col, int row, \
 		int total_iterations, int num_iterations, int blockCols, int blockRows, int borderCols, int borderRows) 
 {
     dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
@@ -250,9 +253,7 @@ int compute_tran_temp(float *MatrixPower,float *MatrixTemp[2], int col, int row,
 	cudaDeviceSynchronize();
 
 	double elapsedTime = cpuSecond() - startKernelTime;
-	printf("GPU Runtime: %f\n", elapsedTime);
-
-    return dst;
+    return {dst, elapsedTime};
 }
 
 void usage(int argc, char **argv){
@@ -267,7 +268,7 @@ void usage(int argc, char **argv){
 }
 
 int main(int argc, char** argv){   
-    std::cout << "version 6\n" << std::endl;
+    std::cout << "version 55\n" << std::endl;
     printf("WG size of kernel = %d X %d\n", BLOCK_SIZE, BLOCK_SIZE);
 	double start = cpuSecond();
     run(argc,argv);
@@ -331,8 +332,23 @@ void run(int argc, char** argv){
     cudaMalloc((void**)&MatrixPower, sizeof(float)*size);
     cudaMemcpy(MatrixPower, FilesavingPower, sizeof(float)*size, cudaMemcpyHostToDevice);
     printf("Start computing the transient temperature\n");
-    int ret = compute_tran_temp(MatrixPower,MatrixTemp,grid_cols,grid_rows, \
-	 total_iterations,pyramid_height, blockCols, blockRows, borderCols, borderRows);
+
+    int ret;
+
+    // we run the cuda compute 100 times and get the median and average runtime
+    std::vector<double> times;
+    for(int i = 0; i < 100; i++){
+        auto [ret, time] = compute_tran_temp(MatrixPower,MatrixTemp,grid_cols,grid_rows, \
+            total_iterations,pyramid_height, blockCols, blockRows, borderCols, borderRows);
+        
+        times.push_back(time);
+    }
+
+    std::cout << "Ran the sim " << times.size() << " times." << std::endl;
+    std::sort(times.begin(), times.end());
+    std::cout << "Median time: " << times[times.size()/2] << "s" << std::endl;
+    std::cout << "Average time: " << std::accumulate(times.begin(), times.end(), 0.0)/times.size() << "s" << std::endl;
+
 	printf("Ending simulation\n");
     cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float)*size, cudaMemcpyDeviceToHost);
 
