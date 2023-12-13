@@ -5,6 +5,7 @@
 *.cubin
 *.fatbin
 *.exe
-output.out
+*.out
+data/*
 .DS_Store
 hotspot
