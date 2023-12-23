@@ -378,10 +378,10 @@ void run(int argc, char **argv)
 
     printf("Ending simulation\n");
 
-    // if (concurrentAccess)
-    // {
-    //     cudaMemPrefetchAsync(MatrixTemp[ret], sizeof(float) * size, cudaCpuDeviceId);
-    // }
+    if (concurrentAccess)
+    {
+        cudaMemPrefetchAsync(MatrixTemp[ret], sizeof(float) * size, cudaCpuDeviceId);
+    }
 
     writeoutput(MatrixTemp[ret], grid_rows, grid_cols, ofile);
 
