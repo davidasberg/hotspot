@@ -342,17 +342,23 @@ void run(int argc, char **argv)
     readinput(FilesavingPower, grid_rows, grid_cols, pfile);
 
     float *MatrixTemp[2], *MatrixPower;
-    cudaMalloc((void **)&MatrixTemp[0], sizeof(float) * size);
-    cudaMalloc((void **)&MatrixTemp[1], sizeof(float) * size);
-    cudaMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float) * size, cudaMemcpyHostToDevice);
+    cudaStream_t stream;
+    cudaStreamCreate(&stream);
+    cudaMalloc((void**)&MatrixTemp[0], sizeof(float)*size);
+    cudaMalloc((void**)&MatrixTemp[1], sizeof(float)*size);
+    
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+    start = std::chrono::system_clock::now();
+    cudaMemcpyAsync(MatrixTemp[0], FilesavingTemp, sizeof(float)*size, cudaMemcpyHostToDevice, stream);
+    cudaMalloc((void**)&MatrixPower, sizeof(float)*size);
+    cudaMemcpyAsync(MatrixPower, FilesavingPower, sizeof(float)*size, cudaMemcpyHostToDevice, stream);
+    cudaStreamSynchronize(stream);
+    end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end-start;
+    fprintf(stderr, "Time to copy data to GPU: %f\n", std::chrono::duration<double, std::milli>(end-start).count());
 
-    cudaMalloc((void **)&MatrixPower, sizeof(float) * size);
-    cudaMemcpy(MatrixPower, FilesavingPower, sizeof(float) * size, cudaMemcpyHostToDevice);
     printf("Start computing the transient temperature\n");
-
     int ret;
-
-    // we run the cuda compute 1000 times and get the median and average runtime
     std::vector<double> times;
     for (int i = 0; i < 100; i++)
     {
@@ -368,13 +374,14 @@ void run(int argc, char **argv)
     std::cout << "Median time: " << times[times.size() / 2] << "s" << std::endl;
     std::cout << "Average time: " << std::accumulate(times.begin(), times.end(), 0.0) / times.size() << "s" << std::endl;
 
-    printf("Ending simulation\n");
-    cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float) * size, cudaMemcpyDeviceToHost);
+    cudaMemcpy2D(MatrixOut, sizeof(float)*grid_cols, MatrixTemp[ret], sizeof(float)*grid_cols, sizeof(float)*grid_cols, grid_rows, cudaMemcpyDeviceToHost);
 
-    writeoutput(MatrixOut, grid_rows, grid_cols, ofile);
+    writeoutput(MatrixOut,grid_rows, grid_cols, ofile);
 
     cudaFree(MatrixPower);
     cudaFree(MatrixTemp[0]);
     cudaFree(MatrixTemp[1]);
     free(MatrixOut);
 }
+
+
