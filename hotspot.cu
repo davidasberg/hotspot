@@ -3,6 +3,7 @@
 #include <time.h>
 #include <assert.h>
 #include <iostream>
+#include <chrono>
 #include <sys/time.h>
 #include <vector>
 #include <algorithm>
@@ -362,10 +363,10 @@ void run(int argc, char **argv)
     std::vector<double> times;
     for (int i = 0; i < 100; i++)
     {
-        auto [ret, time] = compute_tran_temp(MatrixPower, MatrixTemp, grid_cols, grid_rows,
-                                             total_iterations, pyramid_height, blockCols, blockRows, borderCols, borderRows);
-
+        auto [temp_ret, time] = compute_tran_temp(MatrixPower, MatrixTemp, grid_cols, grid_rows,
+                                                  total_iterations, pyramid_height, blockCols, blockRows, borderCols, borderRows);
         times.push_back(time);
+        ret = temp_ret;
     }
 
     std::cout << std::endl
