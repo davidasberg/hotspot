@@ -299,7 +299,7 @@ void run(int argc, char **argv)
 {
     int size;
     int grid_rows, grid_cols;
-    float *FilesavingTemp, *FilesavingPower, *MatrixOut;
+    float *MatrixTemp[2], *MatrixPower;
     char *tfile, *pfile, *ofile;
 
     int total_iterations = 60;
@@ -328,38 +328,46 @@ void run(int argc, char **argv)
     int blockCols = grid_cols / smallBlockCol + ((grid_cols % smallBlockCol == 0) ? 0 : 1);
     int blockRows = grid_rows / smallBlockRow + ((grid_rows % smallBlockRow == 0) ? 0 : 1);
 
-    FilesavingTemp = (float *)malloc(size * sizeof(float));
-    FilesavingPower = (float *)malloc(size * sizeof(float));
-    MatrixOut = (float *)calloc(size, sizeof(float));
+    cudaMallocManaged((void **)&MatrixTemp[0], sizeof(float) * size);
+    cudaMallocManaged((void **)&MatrixTemp[1], sizeof(float) * size);
+    cudaMallocManaged((void **)&MatrixPower, sizeof(float) * size);
 
-    if (!FilesavingPower || !FilesavingTemp || !MatrixOut)
+    if (!MatrixPower[0] || !MatrixPower[1] || !MatrixTemp)
         fatal("unable to allocate memory");
+
+    int concurrentAccess;
+    cudaDeviceGetAttribute(&concurrentAccess, cudaDevAttrConcurrentManagedAccess, 0);
+
+    // prefetch the data to the cpu if (concurrentAccess)
+    {
+        cudaMemPrefetchAsync(MatrixTemp[0], sizeof(float) * size, cudaCpuDeviceId);
+        cudaMemPrefetchAsync(MatrixPower, sizeof(float) * size, cudaCpuDeviceId);
+    }
 
     printf("pyramidHeight: %d\ngridSize: [%d, %d]\nborder:[%d, %d]\nblockGrid:[%d, %d]\ntargetBlock:[%d, %d]\n",
            pyramid_height, grid_cols, grid_rows, borderCols, borderRows, blockCols, blockRows, smallBlockCol, smallBlockRow);
 
-    readinput(FilesavingTemp, grid_rows, grid_cols, tfile);
-    readinput(FilesavingPower, grid_rows, grid_cols, pfile);
+    readinput(MatrixTemp[0], grid_rows, grid_cols, tfile);
+    readinput(MatrixPower, grid_rows, grid_cols, pfile);
 
-    float *MatrixTemp[2], *MatrixPower;
-    cudaMalloc((void **)&MatrixTemp[0], sizeof(float) * size);
-    cudaMalloc((void **)&MatrixTemp[1], sizeof(float) * size);
-    cudaMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float) * size, cudaMemcpyHostToDevice);
+    if (concurrentAccess)
+    {
+        cudaMemPrefetchAsync(MatrixTemp[0], sizeof(float) * size, 0);
+        cudaMemPrefetchAsync(MatrixTemp[1], sizeof(float) * size, 0);
+        cudaMemPrefetchAsync(MatrixPower, sizeof(float) * size, 0);
+    }
 
-    cudaMalloc((void **)&MatrixPower, sizeof(float) * size);
-    cudaMemcpy(MatrixPower, FilesavingPower, sizeof(float) * size, cudaMemcpyHostToDevice);
     printf("Start computing the transient temperature\n");
-
     int ret;
-
     // we run the cuda compute 1000 times and get the median and average runtime
     std::vector<double> times;
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 1; i++)
     {
-        auto [ret, time] = compute_tran_temp(MatrixPower, MatrixTemp, grid_cols, grid_rows,
-                                             total_iterations, pyramid_height, blockCols, blockRows, borderCols, borderRows);
+        auto [temp_ret, time] = compute_tran_temp(MatrixPower, MatrixTemp, grid_cols, grid_rows,
+                                                  total_iterations, pyramid_height, blockCols, blockRows, borderCols, borderRows);
 
         times.push_back(time);
+        ret = temp_ret;
     }
 
     std::cout << std::endl
@@ -369,12 +377,15 @@ void run(int argc, char **argv)
     std::cout << "Average time: " << std::accumulate(times.begin(), times.end(), 0.0) / times.size() << "s" << std::endl;
 
     printf("Ending simulation\n");
-    cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float) * size, cudaMemcpyDeviceToHost);
 
-    writeoutput(MatrixOut, grid_rows, grid_cols, ofile);
+    // if (concurrentAccess)
+    // {
+    //     cudaMemPrefetchAsync(MatrixTemp[ret], sizeof(float) * size, cudaCpuDeviceId);
+    // }
+
+    writeoutput(MatrixTemp[ret], grid_rows, grid_cols, ofile);
 
     cudaFree(MatrixPower);
     cudaFree(MatrixTemp[0]);
     cudaFree(MatrixTemp[1]);
-    free(MatrixOut);
 }
