@@ -1,8 +1,14 @@
-******Adjustable work group size*****
-The kernel has square shape 
-RD_WG_SIZE_0 or RD_WG_SIZE_0_0 describe one dimension 
-The actually dimension = RD_WG_SIZE_0 * RD_WG_SIZE_0
-
-USAGE:
-make clean
-make KERNEL_DIM="-DRD_WG_SIZE_0=16"
+# Project DD2360 Group 4
+## Usage
+To compile the program:
+```
+make
+```
+To run the program:
+```
+./run
+```
+To verify the output:
+```
+./verify.sh
+```

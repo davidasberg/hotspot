@@ -197,8 +197,10 @@ __global__ void calculate_temp(int iteration,   // number of iteration
         {
             computed = true;
 
+            // Remove redundant compilation
             float two_tmp_on_curr = -2.0f * temp_on_cuda[ty][tx];
 
+            // Explicitly use fmaf instructions
             float south_north = fmaf(Ry_1, (temp_on_cuda[S][tx] + temp_on_cuda[N][tx] + two_tmp_on_curr), power_on_cuda[ty][tx]);
             float east_west = fmaf(Rx_1, (temp_on_cuda[ty][E] + temp_on_cuda[ty][W] + two_tmp_on_curr), fmaf(temp_on_cuda[ty][tx], Rz_1, amb_calc));
 
