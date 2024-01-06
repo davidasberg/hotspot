@@ -356,7 +356,7 @@ void run(int argc, char **argv)
 
     // we run the cuda compute 1000 times and get the median and average runtime
     std::vector<double> times;
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 10000; i++)
     {
         auto [ret, time] = compute_tran_temp(MatrixPower, MatrixTemp, grid_cols, grid_rows,
                                              total_iterations, pyramid_height, blockCols, blockRows, borderCols, borderRows);
