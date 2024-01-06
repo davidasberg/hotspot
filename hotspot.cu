@@ -352,7 +352,7 @@ void run(int argc, char **argv)
     cudaMemcpy(MatrixPower, FilesavingPower, sizeof(float) * size, cudaMemcpyHostToDevice);
     printf("Start computing the transient temperature\n");
 
-    int ret;
+    int finalRet;
 
     // we run the cuda compute 1000 times and get the median and average runtime
     std::vector<double> times;
@@ -360,7 +360,7 @@ void run(int argc, char **argv)
     {
         auto [ret, time] = compute_tran_temp(MatrixPower, MatrixTemp, grid_cols, grid_rows,
                                              total_iterations, pyramid_height, blockCols, blockRows, borderCols, borderRows);
-
+        finalRet = ret;
         times.push_back(time);
     }
 
@@ -371,7 +371,7 @@ void run(int argc, char **argv)
     std::cout << "Average time: " << std::accumulate(times.begin(), times.end(), 0.0) / times.size() << "s" << std::endl;
 
     printf("Ending simulation\n");
-    cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float) * size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(MatrixOut, MatrixTemp[finalRet], sizeof(float) * size, cudaMemcpyDeviceToHost);
 
     writeoutput(MatrixOut, grid_rows, grid_cols, ofile);
 
