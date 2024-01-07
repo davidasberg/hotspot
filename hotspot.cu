@@ -24,18 +24,18 @@
 /* maximum power density possible (say 300W for a 10mm x 10mm chip)	*/
 #define MAX_PD (3.0e6)
 /* required precision in degrees	*/
-#define PRECISION 0.001
+#define PRECISION 0.001f
 #define SPEC_HEAT_SI 1.75e6
 #define K_SI 100
 /* capacitance fitting factor	*/
-#define FACTOR_CHIP 0.5
+#define FACTOR_CHIP 0.5f
 
 /* chip parameters	*/
-float t_chip = 0.0005;
-float chip_height = 0.016;
-float chip_width = 0.016;
+float t_chip = 0.0005f;
+float chip_height = 0.016f;
+float chip_width = 0.016f;
 /* ambient temperature, assuming no package at all	*/
-float amb_temp = 80.0;
+float amb_temp = 80.0f;
 
 void run(int argc, char **argv);
 
@@ -203,7 +203,7 @@ __global__ void calculate_temp(int iteration,   // number of iteration
 
             // Explicitly use fmaf instructions
             float south_north = fmaf(Ry_1, (temp_on_cuda[S][tx] + temp_on_cuda[N][tx] + two_tmp_on_curr), power_on_cuda[ty][tx]);
-            float east_west = fmaf(Rx_1, (temp_on_cuda[ty][E] + temp_on_cuda[ty][W] + two_tmp_on_curr), fmaf(temp_on_cuda[ty][tx], Rz_1, amb_calc));
+            float east_west = fmaf(Rx_1, (temp_on_cuda[ty][E] + temp_on_cuda[ty][W] + two_tmp_on_curr), fmaf(-temp_on_cuda[ty][tx], Rz_1, amb_calc));
 
             temp_t[ty][tx] = fmaf(step_div_Cap, south_north + east_west, temp_on_cuda[ty][tx]);
         }
@@ -239,15 +239,15 @@ std::pair<int, double> compute_tran_temp(float *MatrixPower, float *MatrixTemp[2
     float grid_width = chip_width / col;
 
     float Cap = FACTOR_CHIP * SPEC_HEAT_SI * t_chip * grid_width * grid_height;
-    float Rx = grid_width / (2.0 * K_SI * t_chip * grid_height);
-    float Ry = grid_height / (2.0 * K_SI * t_chip * grid_width);
+    float Rx = grid_width / (2.0f * K_SI * t_chip * grid_height);
+    float Ry = grid_height / (2.0f * K_SI * t_chip * grid_width);
     float Rz = t_chip / (K_SI * grid_height * grid_width);
 
     float max_slope = MAX_PD / (FACTOR_CHIP * t_chip * SPEC_HEAT_SI);
     float step = PRECISION / max_slope;
     float t;
     float time_elapsed;
-    time_elapsed = 0.001;
+    time_elapsed = 0.001f;
 
     float Rx_1 = 1 / Rx;
     float Ry_1 = 1 / Ry;

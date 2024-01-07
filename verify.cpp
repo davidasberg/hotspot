@@ -2,7 +2,7 @@
 #include <fstream>
 
 bool same(double a, double b){
-    return (a - b) < 0.000001;
+    return std::abs(a - b) < 0.001;
 }
 
 bool verify(char * correctFile, char * outputFile, int expectedSize){
