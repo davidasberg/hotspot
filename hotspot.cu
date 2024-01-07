@@ -7,6 +7,7 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
+#include <string>
 
 #ifdef RD_WG_SIZE_0_0
 #define BLOCK_SIZE RD_WG_SIZE_0_0
@@ -50,9 +51,9 @@ double cpuSecond()
     return ((double)tp.tv_sec + (double)tp.tv_usec * 1.e-6);
 }
 
-void fatal(char *s)
+void fatal(std::string s)
 {
-    fprintf(stderr, "error: %s\n", s);
+    fprintf(stderr, "error: %s\n", s.c_str());
 }
 
 void writeoutput(float *vect, int grid_rows, int grid_cols, char *file)
@@ -285,8 +286,6 @@ void usage(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-    std::cout << "version 555_2\n"
-              << std::endl;
     printf("WG size of kernel = %d X %d\n", BLOCK_SIZE, BLOCK_SIZE);
     double start = cpuSecond();
     run(argc, argv);
